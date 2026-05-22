@@ -1,0 +1,51 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: 'arm64 AppleClang',  runner: macos-latest,    arch_flag: '-mcpu=apple-m1' }
+          - { label: 'Intel AppleClang',  runner: macos-15-intel,  arch_flag: '-march=x86-64-v3 -mtune=native' }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install deps
+        run: brew install cmake ninja boost catch2
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPCCL_NATIVE_ARCH=OFF \
+            -DCMAKE_C_FLAGS="${{ matrix.arch_flag }}" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.arch_flag }}"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        env:
+          UBSAN_OPTIONS: "suppressions=${{ github.workspace }}/tests/ubsan_suppressions.txt:print_stacktrace=1:halt_on_error=1"
+        run: ctest --test-dir build --output-on-failure

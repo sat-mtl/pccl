@@ -1,0 +1,105 @@
+name: Linux
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.label }} ${{ matrix.compiler }}${{ matrix.sanitizer && ' +ASAN/UBSAN' || '' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: 'Debian trixie', image: 'debian:trixie',  compiler: gcc,   pm: apt }
+          - { label: 'Debian trixie', image: 'debian:trixie',  compiler: clang, pm: apt }
+          - { label: 'Ubuntu 26.04',  image: 'ubuntu:26.04',   compiler: gcc,   pm: apt }
+          - { label: 'Ubuntu 26.04',  image: 'ubuntu:26.04',   compiler: clang, pm: apt }
+          - { label: 'Arch',          image: 'archlinux:base', compiler: gcc,   pm: pacman }
+          - { label: 'Arch',          image: 'archlinux:base', compiler: clang, pm: pacman }
+          - { label: 'Fedora',        image: 'fedora:latest',  compiler: gcc,   pm: dnf }
+          - { label: 'Fedora',        image: 'fedora:latest',  compiler: clang, pm: dnf }
+          - { label: 'Ubuntu 26.04',  image: 'ubuntu:26.04',   compiler: clang, pm: apt, sanitizer: true }
+
+    steps:
+      - name: Install deps (apt)
+        if: matrix.pm == 'apt'
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends \
+            git ca-certificates pkg-config \
+            cmake ninja-build \
+            libboost-container-dev \
+            catch2 \
+            ${{ matrix.compiler == 'gcc' && 'g++' || 'clang libclang-rt-dev' }}
+
+      - name: Install deps (pacman)
+        if: matrix.pm == 'pacman'
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git base-devel cmake ninja pkgconf \
+            boost catch2 \
+            ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
+
+      - name: Install deps (dnf)
+        if: matrix.pm == 'dnf'
+        run: |
+          # On Fedora the Catch2 v3 package is `catch-devel`. `catch2-devel`
+          # is the legacy v2.13 line and would fail find_package(Catch2 3).
+          dnf install -y \
+            git cmake ninja-build pkgconfig \
+            boost-devel catch-devel \
+            ${{ matrix.compiler == 'gcc' && 'gcc-c++' || 'clang' }}
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then CXX=g++; CC=gcc; else CXX=clang++; CC=clang; fi
+          FLAGS="-march=x86-64-v3 -mtune=native"
+          BUILD_TYPE=Release
+          LTO=ON
+          LFLAGS=""
+          if [ "${{ matrix.sanitizer }}" = "true" ]; then
+            FLAGS="$FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer -D_GLIBCXX_ASSERTIONS=1"
+            LFLAGS="-fsanitize=address,undefined"
+            BUILD_TYPE=Debug
+            LTO=OFF
+          fi
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_C_FLAGS="$FLAGS" \
+            -DCMAKE_CXX_FLAGS="$FLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$LFLAGS" \
+            -DPCCL_NATIVE_ARCH=OFF \
+            -DPCCL_ENABLE_LTO=$LTO
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        env:
+          UBSAN_OPTIONS: "suppressions=${{ github.workspace }}/tests/ubsan_suppressions.txt:print_stacktrace=1:halt_on_error=1"
+          ASAN_OPTIONS: "detect_leaks=1"
+        run: ctest --test-dir build --output-on-failure

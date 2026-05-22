@@ -1,0 +1,31 @@
+# UBSAN suppressions for the pccl test suite.
+#
+# Format: one rule per line, "<check>:<file-or-function>".
+# Used at runtime via UBSAN_OPTIONS=suppressions=tests/ubsan_suppressions.txt
+#
+# TurboPFor's hot path packs/unpacks variable-width integers by casting
+# unsigned char* to uint32_t* / uint64_t* and reading/writing through the
+# cast. This is illegal per the C standard but works on every x86 CPU and
+# is the entire performance basis of the codec. The same files have
+# `__ARM_NEON` branches that go through aligned NEON loads on aarch64,
+# so this is purely an x86-on-paper concern. Suppress here so the
+# remaining UBSAN checks stay loud for our own code.
+alignment:bitpack_.h
+alignment:bitunpack_.h
+alignment:bitutil_.h
+alignment:vp4c.c
+alignment:vp4d.c
+alignment:bitpack.c
+alignment:bitunpack.c
+alignment:transpose.c
+alignment:transpose_.c
+alignment:trlec.c
+alignment:trled.c
+alignment:vint.c
+alignment:vsimple.c
+alignment:vbit.c
+alignment:fp.c
+alignment:bic.c
+alignment:eliasfano.c
+alignment:v8.c
+alignment:v8pack.c

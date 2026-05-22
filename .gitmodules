@@ -1,0 +1,28 @@
+[submodule "3rdparty/fse"]
+	path = 3rdparty/fse
+	url = https://github.com/Cyan4973/FiniteStateEntropy.git
+[submodule "3rdparty/streamvbyte"]
+	path = 3rdparty/streamvbyte
+	url = https://github.com/lemire/streamvbyte.git
+[submodule "3rdparty/turbopfor"]
+	path = 3rdparty/turbopfor
+	url = https://github.com/powturbo/TurboPFor-Integer-Compression.git
+[submodule "3rdparty/xsimd"]
+	path = 3rdparty/xsimd
+	url = https://github.com/xtensor-stack/xsimd.git
+[submodule "3rdparty/atomic_queue"]
+	path = 3rdparty/atomic_queue
+	url = https://github.com/max0x7ba/atomic_queue.git
+[submodule "3rdparty/miniply"]
+	path = 3rdparty/miniply
+	url = https://github.com/vilya/miniply.git
+[submodule "3rdparty/ips4o"]
+	path = 3rdparty/ips4o
+	url = https://github.com/jcelerier/ips4o.git
+	branch = pccl-patches
+[submodule "3rdparty/rans_static"]
+	path = 3rdparty/rans_static
+	url = https://github.com/jkbonfield/rans_static.git
+[submodule "3rdparty/ryg_rans"]
+	path = 3rdparty/ryg_rans
+	url = https://github.com/rygorous/ryg_rans.git

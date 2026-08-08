@@ -43,7 +43,7 @@ jobs:
             -DCMAKE_CXX_FLAGS="${{ matrix.arch_flag }}"
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
       - name: Test
         env:

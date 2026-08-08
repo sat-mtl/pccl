@@ -19,7 +19,6 @@ jobs:
   build:
     name: ${{ matrix.label }} ${{ matrix.compiler }}${{ matrix.sanitizer && ' +ASAN/UBSAN' || '' }}
     runs-on: [self-hosted, linux, x64, sat-builder]
-    container: ubuntu:noble
     container:
       image: ${{ matrix.image }}
     strategy:

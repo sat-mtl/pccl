@@ -96,7 +96,7 @@ jobs:
             -DPCCL_ENABLE_LTO=$LTO
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
       - name: Test
         env:
